@@ -38,11 +38,3 @@ The specific software dependencies are listed in "requirements.txt".
 * [Tutorial 2](https://github.com/cmzuo11/stClinic/wiki/Tutorial-2:-Integration-Analysis-of-Primary-Colorectal-Cancer-and-Liver-Metastasis-Slices): Integrating 24 slices comprising 14 primary colorectal cancers and 10 liver metastases.
 * [Tutorial 3](https://github.com/cmzuo11/stClinic/wiki/Tutorial-3:-Supervised-Model-for-Identifying-Metastasis%E2%80%90Related-Niches-Using-Primary-Colorectal-Cancer-and-Liver-Metastasis-Slices): Identifying metastasis-related TMEs through integrative analysis of primary colorectal cancer and liver metastasis slices.
 
-## References
-
-* stMVC: https://github.com/cmzuo11/stMVC
-* STAligner: https://github.com/zhoux85/STAligner
-* CellCharter: https://github.com/CSOgroup/cellcharter
-* CytoCommunity: https://github.com/huBioinfo/CytoCommunity
-* PathFinder: https://github.com/Biooptics2021/PathFinder
-
