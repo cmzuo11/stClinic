@@ -32,4 +32,5 @@ The specific software dependencies are listed in "requirements.txt".
 * [Tutorial 1](https://github.com/cmzuo11/stClinic/wiki/Tutorial-1:-10X-Visium-(DLPFC-dataset)): Integrating slices 151673, 151674, 151675, and 151676 of the DLPFC dataset.
 * [Tutorial 2](https://github.com/cmzuo11/stClinic/wiki/Tutorial-2:-Integration-Analysis-of-Primary-Colorectal-Cancer-and-Liver-Metastasis-Slices): Integrating 24 slices comprising 14 primary colorectal cancers and 10 liver metastases.
 * [Tutorial 3](https://github.com/cmzuo11/stClinic/wiki/Tutorial-3:-Supervised-Model-for-Identifying-Metastasis%E2%80%90Related-Niches-Using-Primary-Colorectal-Cancer-and-Liver-Metastasis-Slices): Identifying metastasis-related TMEs through integrative analysis of primary colorectal cancer and liver metastasis slices.
+* [Quick start](https://github.com/cmzuo11/stClinic/wiki/Quick-start): Quick start for unsupervised and supervised stClinic.
 
