@@ -4,7 +4,7 @@
 
 ## Overview
 
-![image](https://github.com/JunjieXia14/stClinic/blob/main/image/stClinic_logo.png)
+![image](https://github.com/cmzuo11/stClinic/blob/main/image/stClinic_logo.png)
 
 stClinic can integrate spatial multi-slice omics data from the same tissue or different tissues, and spatial multi-omics data from the same slice or different slices/technologies.
 
@@ -15,7 +15,7 @@ The installation was tested on a machine with a 40-core Intel(R) Xeon(R) Silver 
 ### 1. Grab source code of stClinic
 
 ```bash
-git clone https://github.com/JunjieXia14/stClinic.git
+git clone https://github.com/cmzuo11/stClinic.git
 cd stClinic-main
 ```
 
