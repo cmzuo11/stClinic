@@ -27,7 +27,6 @@ parser  =  stClinic.parameter_setting()
 args    =  parser.parse_args()
 
 args.input_dir = '/sibcb1/chenluonanlab8/zuochunman/Share_data/xiajunjie/Datasets/DLPFC/'
-
 args.out_dir   = '/sibcb1/chenluonanlab8/cmzuo/workPath/Software/stClinic/stClinic_out/'
 Path(args.out_dir).mkdir(parents=True, exist_ok=True)
 
