@@ -17,7 +17,7 @@ conda create -n stClinic python=3.8.17 pip
 conda activate stClinic
 ```
 
-### Step2. automatically install stClinic from pypi package: https://pypi.org/project/stClinic/
+### Step2. automatically install stClinic from pypi package
 
 ```bash
 pip install stClinic
