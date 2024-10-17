@@ -18,7 +18,7 @@ conda activate stClinic
 ```
 
 ### Step2. automatically install stClinic from pypi package
-* If your CUDA version is in the list(https://data.pyg.org/whl/), please install the corresponding version torch pyg dependencies. We provide an exmaple for CUDA 12.4:
+* If your CUDA version is in the list: https://data.pyg.org/whl/, please install the corresponding version torch pyg dependencies. We provide an exmaple for CUDA 12.4:
 
 ```bash
 pip install stClinic
