@@ -7,25 +7,21 @@ stClinic can integrate spatial multi-slice omics data from the same tissue or di
 
 The installation was tested on a machine with a 40-core Intel(R) Xeon(R) Silver 4210R CPU, 128GB of RAM, and an NVIDIA A800 GPU with 80GB of RAM, using Python 3.8.17, Scanpy 1.9.3, PyTorch 1.12.0, and PyG (PyTorch Geometric) 2.3.0. If possible, please run stClinic on CUDA.
 
-### 1. Grab source code of stClinic
-
-```bash
-git clone https://github.com/cmzuo11/stClinic.git
-cd stClinic-main
-```
-
-### 2. Install stClinic in the virtual environment by conda
+### Step1. Install stClinic in the virtual environment by conda
 
 * First, install conda: https://docs.anaconda.com/anaconda/install/index.html
-* Then, all packages used by stClinic (described by "environment.yml") are automatically installed in a few minutes.
+* Then, create a envs named stClinic with python 3.8.17
 
 ```bash
-conda config --set channel_priority strict
-conda env create -f environment.yml
+conda create -n stClinic python=3.8.17 pip
 conda activate stClinic
 ```
 
-The specific software dependencies are listed in "requirements.txt".
+### Step2. automatically install stClinic from pypi package: https://pypi.org/project/stClinic/
+
+```bash
+pip install stClinic
+```
 
 ## Tutorials
 
