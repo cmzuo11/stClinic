@@ -613,8 +613,8 @@ def train_Prediction_Model(adata, hidden_dims_pred=[1],
 
     loader = DenseDataLoader(data_list, batch_size=8, shuffle=True)
 
-    os.makedirs('/home/zuocm/Share_data/xiajunjie/stClinic/Prediction/checkpoint/', exist_ok=True)
-    early_stopping = EarlyStopping(patience=10, checkpoint_file='/home/zuocm/Share_data/xiajunjie/stClinic/Prediction/checkpoint/StatAttention_UMAP_model.pt')
+    os.makedirs('./checkpoint/', exist_ok=True)
+    early_stopping = EarlyStopping(patience=10, checkpoint_file='./checkpoint/StatAttention_UMAP_model.pt')
 
     model = stClinic_Prediction_Model(hidden_dims_pred=[data.x.shape[0], hidden_dims_pred[0]],
                                       stat_dim=data.x.shape[1]
@@ -745,8 +745,8 @@ def train_Cross_Validation_Model(adata, hidden_dims_pred=[1],
 
             train_loader = DenseDataLoader(train_data_list, batch_size=8, shuffle=True)
 
-            os.makedirs(f'/home/zuocm/Share_data/xiajunjie/stClinic/CrossValidation/checkpoint_CV{num_fold+1}/', exist_ok=True)
-            early_stopping = EarlyStopping(patience=10, checkpoint_file=f'/home/zuocm/Share_data/xiajunjie/stClinic/CrossValidation/checkpoint_CV{num_fold+1}/Stat_AttPred_UMAP_model_CV{num_fold+1}.pt')
+            os.makedirs('./checkpoint_CV{}/'.format((num_fold+1)), exist_ok=True)
+            early_stopping = EarlyStopping(patience=10, checkpoint_file='./checkpoint_CV{}/Stat_AttPred_UMAP_model_CV{}.pt'.format((num_fold+1), (num_fold+1)))
 
             model = stClinic_Prediction_Model(hidden_dims_pred=[data.x.shape[0], hidden_dims_pred[0]],
                                                 stat_dim=data.x.shape[1]
@@ -825,8 +825,8 @@ def train_Cross_Validation_Model(adata, hidden_dims_pred=[1],
 
             train_loader = DenseDataLoader(train_data_list, batch_size=8, shuffle=True)
 
-            os.makedirs(f'/home/zuocm/Share_data/xiajunjie/stClinic/CrossValidation/checkpoint_CV{num_fold+1}/', exist_ok=True)
-            early_stopping = EarlyStopping(patience=10, checkpoint_file=f'/home/zuocm/Share_data/xiajunjie/stClinic/CrossValidation/checkpoint_CV{num_fold+1}/Stat_AttPred_UMAP_model_CV{num_fold+1}.pt')
+            os.makedirs('./checkpoint_CV{}/'.format((num_fold+1)), exist_ok=True)
+            early_stopping = EarlyStopping(patience=10, checkpoint_file='./checkpoint_CV{}/Stat_AttPred_UMAP_model_CV{}.pt'.format((num_fold+1), (num_fold+1)))
 
             model = stClinic_Prediction_Model(hidden_dims_pred=[data.x.shape[0], hidden_dims_pred[0]],
                                               stat_dim=data.x.shape[1]
