@@ -3,10 +3,14 @@ import anndata
 import scanpy as sc
 import random
 import torch
+import numpy as np
+import pandas as pd
 import warnings
-from pathlib import Path
-
+import matplotlib.pyplot as plt
+import re
 import stClinic as stClinic
+
+from pathlib import Path
 
 warnings.filterwarnings("ignore")
 
@@ -16,8 +20,14 @@ print(used_device)
 parser  =  stClinic.parameter_setting()
 args    =  parser.parse_args()
 
-args.out_dir  = args.input_dir + 'stClinic/'
+args.input_dir = '/sibcb2/chenluonanlab7/zuochunman/Share_data/xiajunjie/CRCLM/'
+args.out_dir   = '/sibcb1/chenluonanlab8/cmzuo/workPath/Software/stClinic/stClinic_out/'
 Path(args.out_dir).mkdir(parents=True, exist_ok=True)
+
+def extract_number(s):
+    first_sort = int(re.findall(r'\d+', s)[0])
+    second_sort = int(re.findall(r'\d+', s)[1])
+    return (first_sort, second_sort)
 
 # Set seed
 seed = 666
@@ -66,7 +76,7 @@ for source_id, rad in zip(source_ids, rad_list):
                 adata.obs_names = [x + '_' + source_id[:-6] + '_' + ad[:-5] for x in adata.obs_names]
 
                 # Construct intra-edges
-                Cal_Spatial_Net(adata, rad_cutoff=rad)
+                stClinic.Cal_Spatial_Net(adata, rad_cutoff=rad)
 
                 # Normalization
                 sc.pp.highly_variable_genes(adata, flavor="seurat_v3", n_top_genes=args.n_top_genes)
@@ -87,15 +97,15 @@ adata_concat.obs["batch_name"] = adata_concat.obs["slice_name"].astype('category
 print('\nShape of concatenated AnnData object: ', adata_concat.shape)
 
 # Construct unified graph
-mnn_dict   = create_dictionary_mnn(adata_concat, use_rep='X_pca', batch_name='batch_name', k=args.k)
-adj_concat = inter_linked_graph(adj_list, section_ids, mnn_dict)
+mnn_dict   = stClinic.create_dictionary_mnn(adata_concat, use_rep='X_pca', batch_name='batch_name', k=args.k)
+adj_concat = stClinic.inter_linked_graph(adj_list, section_ids, mnn_dict)
 adata_concat.uns['adj']      = adj_concat
 adata_concat.uns['edgeList'] = np.nonzero(adj_concat)
 
 # Run stClinic for unsupervised integration
-centroids_num = args.n_centroids
-print(f'Estimated centroids number: {centroids_num}')
-adata_concat  = train_stClinic_model(adata_concat, n_centroids=centroids_num, lr=args.lr_integration/14, device=used_device)
+# centroids_num = estimate_k(adata_concat.X.T)
+centroids_num = 8
+adata_concat  = stClinic.train_stClinic_model(adata_concat, n_centroids=centroids_num, lr=args.lr_integration/14, device=used_device)
 
 # Clustering and UMAP reduction
 sc.pp.neighbors(adata_concat, use_rep='stClinic', random_state=seed)
@@ -104,4 +114,4 @@ sc.tl.umap(adata_concat, random_state=seed)
 
 # Save AnnData object    (only X, obs & obsm)
 del adata_concat.uns; del adata_concat.obsp
-adata_concat.write(path / f'integrated_adata_CRCLM24.h5ad', compression='gzip')  
+adata_concat.write(args.out_dir + 'integrated_adata_CRCLM24.h5ad', compression='gzip')  
