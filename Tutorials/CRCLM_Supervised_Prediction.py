@@ -1,9 +1,11 @@
 import os
-import anndata
 import scanpy as sc
 import random
 import torch
+import numpy as np
+import pandas as pd
 import warnings
+import re
 from pathlib import Path
 
 import stClinic as stClinic
@@ -11,13 +13,11 @@ import stClinic as stClinic
 warnings.filterwarnings("ignore")
 
 used_device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
-print(used_device)
+parser      =  stClinic.parameter_setting()
+args        =  parser.parse_args()
 
-parser  =  stClinic.parameter_setting()
-args    =  parser.parse_args()
-
-args.out_dir  = args.input_dir + 'stClinic/'
-Path(args.out_dir).mkdir(parents=True, exist_ok=True)
+args.input_dir = '/sibcb1/chenluonanlab8/cmzuo/workPath/Software/stClinic/stClinic_out/'
+args.out_dir   = args.input_dir
 
 
 def extract_number(s):
@@ -39,7 +39,7 @@ adata.obs['louvain'] = adata.obs['louvain'].astype('category')
 sorted_batch = sorted(np.unique(adata.obs['batch_name']), key=extract_number)
 
 # 6 statistics measures per cluster
-adata        = stClinic_Statistics_Measures(adata, sorted_batch)
+adata        = stClinic.stClinic_Statistics_Measures(adata, sorted_batch)
 
 # Clinical information (One-hot encoding)
 All_type = []
@@ -52,7 +52,7 @@ type_idx[All_type == 'Metastasis'] = 1
 adata.uns['grading'] = type_idx
 
 # Run stClinic for supervised prediction
-adata = train_Prediction_Model(adata, pred_type='grading', lr=args.lr_prediction, device=used_device)
+adata = stClinic.train_Prediction_Model(adata, pred_type='grading', lr=args.lr_prediction, device=used_device)
 
 # Save AnnData object
-adata.write(args.out_dir + 'integrated_adata_CRCLM24.h5ad', compression='gzip')  
+adata.write(args.out_dir + 'integrated_adata_CRCLM24-sup.h5ad', compression='gzip')  
