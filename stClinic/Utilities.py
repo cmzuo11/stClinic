@@ -5,6 +5,27 @@ import networkx as nx
 import numpy as np
 import torch
 import argparse
+import matplotlib.pyplot as plt
+import faiss
+
+import rpy2.robjects as robjects
+import rpy2.robjects.numpy2ri
+import rpy2.robjects as robjects
+import rpy2.robjects.numpy2ri, rpy2.robjects.pandas2ri
+
+from typing import List, Mapping, Optional, Union
+from sklearn.metrics.pairwise import euclidean_distances
+from anndata import AnnData
+from sklearn.preprocessing import scale
+from scipy.sparse.linalg import eigsh
+from sklearn.metrics import silhouette_score as s_score
+from lifelines.utils import concordance_index
+from lifelines.statistics import logrank_test
+from lifelines import KaplanMeierFitter
+from lifelines import CoxPHFitter
+from sklearn.metrics import pairwise_distances
+from sklearn.metrics import roc_curve, auc
+from sklearn.metrics import confusion_matrix
 
 def parameter_setting():
 
@@ -18,6 +39,8 @@ def parameter_setting():
     parser.add_argument('--n_centroids',   '-NCS', type = int, default = 7,    help='The number of components of the GMM')
     parser.add_argument('--lr_integration',   '-LRI', type = float, default = 0.0005,    help='The learning rate used by stClinic when extracting batch-corrected features in slices')
     parser.add_argument('--lr_prediction',   '-LRP', type = float, default = 0.05,    help='The learning rate used by supervised stClinic')
+
+    return parser
 
 
 def Cal_Spatial_Net(adata, rad_cutoff=None, k_cutoff=None,
@@ -95,8 +118,6 @@ def Cal_Spatial_Net(adata, rad_cutoff=None, k_cutoff=None,
     G = G + sp.eye(G.shape[0])  # self-loop
     adata.uns['adj'] = G
 
-
-
 def mclust_R(adata, num_cluster, modelNames='EEE', used_obsm='VGAEX', random_seed=666):
     """\
     Clustering using the mclust algorithm.
@@ -104,10 +125,8 @@ def mclust_R(adata, num_cluster, modelNames='EEE', used_obsm='VGAEX', random_see
     """
 
     np.random.seed(random_seed)
-    import rpy2.robjects as robjects
     robjects.r.library("mclust")
 
-    import rpy2.robjects.numpy2ri
     rpy2.robjects.numpy2ri.activate()
     r_random_seed = robjects.r['set.seed']
     r_random_seed(random_seed)
@@ -119,7 +138,6 @@ def mclust_R(adata, num_cluster, modelNames='EEE', used_obsm='VGAEX', random_see
     adata.obs['mclust'] = adata.obs['mclust'].astype('int')
     adata.obs['mclust'] = adata.obs['mclust'].astype('category')
     return adata
-
 
 
 def match_cluster_labels(true_labels,est_labels):
@@ -158,9 +176,6 @@ def count_params(model):
     print(f'Total params: {all_params}\nTrainable params: {trainable_params}\nNon-trainable params: {non_trainable_params}')
 
 
-
-from sklearn.preprocessing import scale
-from scipy.sparse.linalg import eigsh
 def estimate_k(data):
     """
     Estimate number of groups k:
@@ -184,8 +199,6 @@ def estimate_k(data):
     return k
 
 
-
-from sklearn.metrics import silhouette_score as s_score
 def F1score(adata):
     """
     Compute silhouette coefficient:
@@ -194,12 +207,12 @@ def F1score(adata):
     silh'cluster = (1+silh_cluster)/2
     """
     s_cluster = s_score(adata.obsm['X_umap'], adata.obs['mclust'])
-    s_batch = s_score(adata.obsm['X_umap'], adata.obs['batch_name'])
+    s_batch   = s_score(adata.obsm['X_umap'], adata.obs['batch_name'])
 
     s_cluster = (1+s_cluster)/2
-    s_batch = (1+s_batch)/2
+    s_batch   = (1+s_batch)/2
 
-    F1score = 2*(1-s_batch)*s_cluster / (s_cluster + (1-s_batch))
+    F1score   = 2*(1-s_batch)*s_cluster / (s_cluster + (1-s_batch))
 
     return F1score
 
@@ -211,11 +224,9 @@ def LISI_score(adata, random_seed=666):
     """
 
     np.random.seed(random_seed)
-    import rpy2.robjects as robjects
     robjects.r.library("lisi")
     rlisi = robjects.r['compute_lisi']
 
-    import rpy2.robjects.numpy2ri, rpy2.robjects.pandas2ri
     rpy2.robjects.numpy2ri.activate()
     rpy2.robjects.pandas2ri.activate()
 
@@ -238,12 +249,8 @@ def LISI_score(adata, random_seed=666):
     return dict(cLISI = clisi, iLISI = ilisi, LISI=lisi_res)
 
 
-
-from lifelines.utils import concordance_index
-from lifelines.statistics import logrank_test
 def CIndex_lifeline(hazards, labels, survtime_all):
     return(concordance_index(survtime_all, -hazards, labels))
-
 
 
 def cox_log_rank(hazardsdata, labels, survtime_all):
@@ -260,7 +267,6 @@ def cox_log_rank(hazardsdata, labels, survtime_all):
     return(pvalue_pred)
 
 
-
 def accuracy_cox(hazardsdata, labels):
     # This accuracy is based on estimated survival events against true survival events
     median = np.median(hazardsdata)
@@ -270,9 +276,6 @@ def accuracy_cox(hazardsdata, labels):
     return correct / len(labels)
 
 
-
-from lifelines import KaplanMeierFitter
-from lifelines import CoxPHFitter
 def KM_plot(hazardsdata, labels, survtime_all, output_dir):
     median = np.median(hazardsdata)
     hazards_dichotomize = np.zeros([len(hazardsdata)], dtype=int)
@@ -282,7 +285,6 @@ def KM_plot(hazardsdata, labels, survtime_all, output_dir):
     T = survtime_all
     E = labels
 
-    import matplotlib.pyplot as plt
     plt.figure(figsize=(8, 8))
     ax = plt.subplot(111)
 
@@ -322,7 +324,6 @@ def KM_plot(hazardsdata, labels, survtime_all, output_dir):
 
 
 
-from sklearn.metrics import confusion_matrix
 def CM_plot(pred_data, labels, output_dir):
     cm = confusion_matrix(labels, pred_data)
 
@@ -337,7 +338,6 @@ def CM_plot(pred_data, labels, output_dir):
 
 
 
-from sklearn.metrics import roc_curve, auc
 def ROC_plot(pred_data, labels, output_dir):
     fpr, tpr, thresholds = roc_curve(labels, pred_data)
     auc_score = auc(fpr,tpr)
@@ -357,7 +357,6 @@ def ROC_plot(pred_data, labels, output_dir):
 
 
 
-from sklearn.metrics import pairwise_distances
 def knn_smoothing(latent, k, mat):
     dist = pairwise_distances(latent)
     row = []
@@ -375,10 +374,7 @@ def knn_smoothing(latent, k, mat):
 
 
 
-from typing import List, Mapping, Optional, Union
-import faiss
-from sklearn.metrics.pairwise import euclidean_distances
-from anndata import AnnData
+
 def spatial_match(embds:List[torch.Tensor],
                   reorder:Optional[bool]=True,
                   smooth:Optional[bool]=True,
