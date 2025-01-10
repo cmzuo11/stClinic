@@ -471,6 +471,25 @@ def spatial_match(embds:List[torch.Tensor],
         return np.array(best), order, similarity
 
 
+from sklearn.metrics.pairwise import pairwise_distances
+def create_pseudo_batch(adata_refer, adata_query, batch_name, use_rep='X_pca'):
+
+    ref_batch_name = np.unique(adata_refer.obs[batch_name].values)
+
+    batch_avg_expr_ref = []
+    for batch in ref_batch_name:
+
+        batch_avg_expr_ref.append(
+                                  np.mean(adata_refer.obsm[use_rep][adata_refer.obs[batch_name]==batch,:], axis=0)
+        )
+
+    dist_mat = pd.DataFrame(
+                            pairwise_distances(adata_query.obsm[use_rep], batch_avg_expr_ref),
+                            columns=ref_batch_name
+                            )
+
+    return dist_mat[ref_batch_name].apply(lambda x: x.idxmin(), axis=1)
+
 
 class EarlyStopping:
     """
