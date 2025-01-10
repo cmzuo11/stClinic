@@ -880,3 +880,158 @@ def train_Cross_Validation_Model(adata, hidden_dims_pred=[1],
         CM_plot(out_total, adata.uns['grading'], output_dir=output_dir)
 
         return grading_acc
+
+
+def stClinic_zero_shot(ref_map_list, hidden_dims_integ=[512, 10],
+                       n_epochs_pre=300, n_epochs_tune=300+100, n_epochs_prune=50, lr=0.0005,
+                       batch_name='batch_name', pseudo_batch_name='pseudo_batch_name',
+                       n_centroids=7, lambda_KL_stage1=0.5, lambda_KL_stage2=0.2,
+                       gradient_clipping=5, weight_decay=0.00001, key_add='stClinic',
+                       pretrained_model=False, params_dir=None,
+                       random_seed=666, device=torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')):
+
+    # Pretrain Fine-tune Mode
+    adata_refer, adata_query = ref_map_list
+    common_HVGs = list(adata_refer.var.index)
+    adata_refer, adata_query = adata_refer[:,common_HVGs], adata_query[:,common_HVGs]
+
+    # Set seed configuration
+    seed = random_seed
+    random.seed(seed)
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed_all(seed)
+    np.random.seed(seed)
+
+    # Reference data preparation
+    adj_mat_refer  = torch.IntTensor(adata_refer.uns['adj']).to(device)
+    edgeList_refer = adata_refer.uns['edgeList']
+    data_refer     = Data(edge_index=torch.LongTensor(np.array([edgeList_refer[0], edgeList_refer[1]])),
+                          prune_edge_index=torch.LongTensor(np.array([])),
+                          x=torch.FloatTensor(adata_refer.X.todense()),
+                          y=torch.LongTensor(adata_refer.obs[batch_name].cat.codes))
+
+    # Transform
+    transform  = T.RandomLinkSplit(num_val=0, num_test=0, is_undirected=True, add_negative_train_samples=False, split_labels=True)
+    data_refer, _, _ = transform(data_refer)
+    data_refer = data_refer.to(device)
+
+    # Set pretrained parameters
+    if pretrained_model:
+        # Loading pretrained parameters
+        model = stClinic(hidden_dims_integ = [data_refer.x.shape[1], hidden_dims_integ[0], hidden_dims_integ[1]],
+                         n_domains         = len(adata_refer.obs[batch_name].cat.categories),
+                         n_centroids       = n_centroids).to(device)
+
+        os.makedirs(f'{params_dir}/reference/', exist_ok=True)
+        model.load_model(f"{params_dir}/reference/model.pt")
+        model.eval()
+        # Reference embeddings
+        _, mu_refer, _, _ = model(data_refer.x, data_refer.edge_index, data_refer.y)
+        adata_refer.obsm[key_add] = mu_refer.cpu().detach().numpy()
+
+    else:
+        # Initialization
+        model = stClinic(hidden_dims_integ = [data_refer.x.shape[1], hidden_dims_integ[0], hidden_dims_integ[1]],
+                         n_domains         = len(adata_refer.obs[batch_name].cat.categories),
+                         n_centroids       =  n_centroids).to(device)
+
+
+        print('Pretrain with unregularized stClinic (without GMM regularizer)...')
+        model.pi.requires_grad, model.mu_c.requires_grad, model.var_c.requires_grad = False, False, False
+
+        optimizer_stClinic = optim.Adam(filter(lambda p: p.requires_grad, model.parameters()), lr=lr, weight_decay=weight_decay)
+
+        with trange(n_epochs_pre, total=n_epochs_pre, desc='Epochs') as tq:
+            for epoch in tq:
+                model.train()
+                optimizer_stClinic.zero_grad()
+                z, mu, log_var, reX = model(data_refer.x, data_refer.edge_index, data_refer.y)
+                features_recon_loss = F.mse_loss(data_refer.x, reX)
+                graph_recon_loss    = model.graph_recon_loss(mu, data_refer.pos_edge_label_index)
+                KL_loss    = 0
+                epoch_loss = {'feat_recon_loss':features_recon_loss*10, 'graph_recon_loss':graph_recon_loss, 'KL_loss':KL_loss*0.0}
+                sum(epoch_loss.values()).backward()
+                nn.utils.clip_grad_norm_(filter(lambda p: p.requires_grad, model.parameters()), gradient_clipping)
+                optimizer_stClinic.step()
+                epoch_info = ','.join(['{}={:.3f}'.format(k, v) for k,v in epoch_loss.items()])
+                tq.set_postfix_str(epoch_info) 
+        model.eval()
+
+        print('Initialize Gaussian Mixture Model...')
+        model.init_gmm_params(data_refer.x, data_refer.edge_index, adj_mat_refer, type='GMM', seed=random_seed, start_stage=True)
+
+        print('Train with regularized stClinic (with GMM regularizer)...')
+        model.pi.requires_grad, model.mu_c.requires_grad, model.var_c.requires_grad = True, True, True
+
+        with trange(n_epochs_tune, total=n_epochs_tune, desc='Epochs') as tq:
+
+            for epoch in tq:
+
+                if epoch % n_epochs_prune == 0 and epoch >= 300:
+                    model.eval()
+                    pruned_adj_refer       = model.init_gmm_params(data_refer.x, data_refer.edge_index, adj_mat_refer, type='GMM', seed=random_seed, start_stage=False)
+                    pruned_edgeList_refer  = np.nonzero(pruned_adj_refer.cpu().detach().numpy())
+
+                    data_refer = Data(edge_index=torch.LongTensor(np.array([pruned_edgeList_refer[0], pruned_edgeList_refer[1]])),
+                                      prune_edge_index=torch.LongTensor(np.array([])),
+                                      x=torch.FloatTensor(data_refer.X.todense()),
+                                      y=torch.LongTensor(data_refer.obs[batch_name].cat.codes))
+
+                    data_refer, _, _ = transform(data_refer)
+                    data_refer       = data_refer.to(device)
+
+                model.train()
+                optimizer_stClinic.zero_grad()
+                z, mu, log_var, reX = model(data_refer.x, data_refer.edge_index, data_refer.y)
+                features_recon_loss = F.mse_loss(data_refer.x, reX)
+                graph_recon_loss    = model.graph_recon_loss(mu, data_refer.pos_edge_label_index)
+                KL_loss             = model.KL_loss(z, mu, log_var)
+
+                epoch_loss = {'feat_recon_loss':features_recon_loss*10, 'graph_recon_loss':graph_recon_loss, 'KL_loss':KL_loss*lambda_KL_stage1}
+                sum(epoch_loss.values()).backward()
+                nn.utils.clip_grad_norm_(filter(lambda p: p.requires_grad, model.parameters()), gradient_clipping)
+                optimizer_stClinic.step()
+
+                epoch_info = ','.join(['{}={:.3f}'.format(k, v) for k,v in epoch_loss.items()])
+                tq.set_postfix_str(epoch_info) 
+
+        model.eval()
+
+        # Saving pretrained parameters
+        os.makedirs(f'{params_dir}/reference/', exist_ok=True)
+        torch.save(model.state_dict(), f"{params_dir}/reference/model.pt")
+
+        # Reference embeddings
+        _, mu_refer, _, _ = model(data_refer.x, data_refer.edge_index, data_refer.y)
+        adata_refer.obsm[key_add] = mu_refer.cpu().detach().numpy()
+
+        # Saving reference anndata
+        adata_refer.write(f"{params_dir}/reference/adata_refer.h5ad", compression='gzip')
+
+    # Construct pseudo batch name label
+    adata_query.obs[pseudo_batch_name] = create_pseudo_batch(adata_refer, adata_query, batch_name, use_rep='X_pca')
+    adata_query.obs[pseudo_batch_name] = adata_query.obs[pseudo_batch_name].astype('category')
+
+    # Query data preparation
+    edgeList_query = adata_query.uns['edgeList']
+    data_query     = Data(edge_index=torch.LongTensor(np.array([edgeList_query[0], edgeList_query[1]])),
+                          prune_edge_index=torch.LongTensor(np.array([])),
+                          x=torch.FloatTensor(adata_query.X.todense()),
+                          y=torch.LongTensor(adata_query.obs[pseudo_batch_name].cat.codes))
+
+    # Transform
+    data_query, _, _ = transform(data_query)
+    data_query       = data_query.to(device)
+
+    _, mu_query, _, _         = model(data_query.x, data_query.edge_index, data_query.y)
+    adata_query.obsm[key_add] = mu_query.cpu().detach().numpy()
+
+    # Saving query anndata
+    os.makedirs(f'{params_dir}/query/', exist_ok=True)
+    adata_query.write(f"{params_dir}/query/adata_query.h5ad", compression='gzip')
+
+    # Concatenated anndata
+    adata_ref_map = anndata.concat([adata_refer, adata_query], join='outer')
+
+    return adata_ref_map
+
