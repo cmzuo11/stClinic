@@ -1,5 +1,5 @@
 # stClinic
-![image](https://github.com/cmzuo11/stClinic/blob/main/image/stClinic_logo.png)
+![image](https://github.com/cmzuo11/stClinic/blob/main/image/Logo.png)
 
 stClinic can integrate spatial multi-slice omics data from the same tissue or different tissues, and spatial multi-omics data from the same slice or different slices/technologies.
 
